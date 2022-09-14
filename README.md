@@ -1,2 +1,3 @@
 # AwsStreamingDataAnalysis
 This is the repo for our capstone project for my post-grad degree in Cloud Computing for big data. This is a data engineering project on the cloud. 
+In This Project We Are Aiming to Collect Tweets About for a Specific Topic (I.e. Stock Market) and Analyze the Sentiment. We Will Make Use of Twitter Api to Gather Tweets and Store Them in S3 Storage, and Process Using Pyspark on Top of Glue. We Will Use Python to Anaylze Them and Store Informations in Dynamodb. We Will Make Use Various Graphs to Show Descriptive Statistics on the Topic, With Front Out Laid Out in Vui.js Framework.
