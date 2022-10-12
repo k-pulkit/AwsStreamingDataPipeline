@@ -1,4 +1,6 @@
 import boto3
+from kinesisFirehose.producers.producertwitterstream.producer_twitter import *
+import multiprocessing
 import logging
 from time import sleep
 import json
