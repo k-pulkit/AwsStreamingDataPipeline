@@ -1,5 +1,5 @@
 import boto3
-from kinesisFirehose.producers.producertwitterstream.producer_twitter import TweetProducer
+from producertwitterstream.producer_twitter import TweetProducer
 import multiprocessing
 import logging
 from time import sleep
@@ -24,13 +24,13 @@ class KinesisFirehoseDeliveryJsonStreamHandler():
        # By default, logging.StreamHandler uses sys.stderr if stream parameter is not specified
     
        self.__firehose = None
-       self.__stream_buffer = {}
+       self.__stream_buffer = []
        self.producers = {}          # holds key: value (DICT)  .. streamname: Producer
        self.stream_names = []
-       self.BATCH_SIZE = 20
+       self.BATCH_SIZE = 1000
 
        try:
-           self.__firehose = boto3.client('firehose')
+           self.__firehose = boto3.client('firehose', region_name='us-east-1')
        except Exception:
            raise RuntimeError('Firehose client initialization failed.')
        
@@ -41,7 +41,7 @@ class KinesisFirehoseDeliveryJsonStreamHandler():
     
     def begin_streams(self):
         try:
-            for producer in self.producers:
+            for producer in self.producers.values():
                 # The below lines of code will start the stream on each producer
                 producer.connect_source()
                 producer.start_stream()
@@ -49,14 +49,14 @@ class KinesisFirehoseDeliveryJsonStreamHandler():
             raise RuntimeError("Failed to initialize one of the producers")
     
     def format(self, record: dict) -> str:
-        return json.loads(record)
+        return json.dumps(record) + "\n"
     
     def run(self):
         # start all the producers
         self.begin_streams()
         while True:
             for stream in self.stream_names:
-                self.publish_stream()
+                self.publish_stream(stream)
 
     def publish_stream(self, stream_name):
        try:
@@ -76,8 +76,9 @@ class KinesisFirehoseDeliveryJsonStreamHandler():
                              })
                
             # Once we have the tweets, publish them
-            
+           sleep(30)
            if self.__firehose and self.__stream_buffer:
+               print(f'Sending {len(self.__stream_buffer)} records')
                self.__firehose.put_record_batch(
                    DeliveryStreamName = stream_name,
                    Records = self.__stream_buffer
@@ -97,7 +98,7 @@ if __name__ == "__main__":
     tweet_producer = TweetProducer()
     
     handler = KinesisFirehoseDeliveryJsonStreamHandler()
-    handler.publish_stream(tweet_producer, "test")
+    handler.register_producer_stream(tweet_producer, "test")
     handler.run()
     
     

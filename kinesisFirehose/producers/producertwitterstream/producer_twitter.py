@@ -1,5 +1,6 @@
 import os.path, sys
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__))))
 
 import multiprocessing
 from typing import overload
@@ -24,9 +25,9 @@ class TClient(tw.StreamingClient):
         
     def on_tweet(self, tweet):
         if type(tweet.referenced_tweets) is list:
-            rtype = 'Original' if not tweet.referenced_tweets[0] else tweet.referenced_tweets[0].type
+            rtype = 'original' if not tweet.referenced_tweets[0] else tweet.referenced_tweets[0].type
         else:
-            rtype = 'Original' if not tweet.referenced_tweets else tweet.referenced_tweets.type
+            rtype = 'original' if not tweet.referenced_tweets else tweet.referenced_tweets.type
         pattern = re.compile('[#|\$]\w+')
         res = {
             'text': tweet.text,
@@ -37,6 +38,7 @@ class TClient(tw.StreamingClient):
         }
         
         self._i += 1
+        print(f"Adding new tweet to queue: #{self._i}")
         logging.info(f"Adding new tweet to queue: #{self._i}")
         self._process_queue.put(res)
         
@@ -90,7 +92,7 @@ class TweetProducer(Producer):
             self.client.add_rules(tw.StreamRule(value = pat, tag = str(symbols_subset)))
         
         self.logger.info("All rules added to client, client is ready to stream")  
-        self.logger.debug(self.client.get_rules())
+        self.logger.info(self.client.get_rules())
     
     def start_stream(self):
         tweet_fields = ['created_at', 'text', \
