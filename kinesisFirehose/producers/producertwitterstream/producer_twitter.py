@@ -103,10 +103,11 @@ class TweetProducer(Producer):
         
     def read1(self):
         if self.stream_process.is_alive():
-            return self.process_queue.get()
+            # get_nowait will throw Empty error if no elements in the queue
+            return self.process_queue.get_nowait()
         else:
             raise RuntimeError("Stream is no longer alive")
-              
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     

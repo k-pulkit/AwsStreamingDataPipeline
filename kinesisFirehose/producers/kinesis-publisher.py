@@ -1,132 +1,104 @@
 import boto3
-from kinesisFirehose.producers.producertwitterstream.producer_twitter import *
+from kinesisFirehose.producers.producertwitterstream.producer_twitter import TweetProducer
 import multiprocessing
 import logging
 from time import sleep
 import json
 import pythonjsonlogger
 import logging.config
+import sys
+from queue import Empty
 
+class Formatter():
+    def __init__(self) -> None:
+        pass
 
-class TweetProducer(object):
+class KinesisFirehoseDeliveryJsonStreamHandler():
+    """
+    // Assumption: Data is json data. To make more generic can implement a Formatter class.
+    This class encapsulates the logic to handle the streams and put records to kinesis.
+    We can pass multiple producers to the instance and the handler will upload the data to kinesis.
+    """
+
     def __init__(self):
-        self.text = "Created by pulkit!"
-        self.id = 12312213
-        self.region = "America"
-        self.timestamp = 1664604088
-        self.created_at = 1664604088
-        self.tags = ['tag-a', 'tag-b']
-
-    def get_tweet(self):
-        return json.dumps({
-                 "twitter-id": 12313,
-                 "text": "tweet adsgaaf pulkit",
-                 "tags": ['APPL', 'GOOGL'],
-                 "timestamp" : 1664604088,
-                 "created_at" : 1664604088,
-                 "region" : "America"
-                 })
-    
-    def generate_tweets(self):
-        while True:
-            sleep(4)
-            yield self.get_tweet()
-    
-
-class KinesisFirehoseDeliveryStreamHandler(logging.StreamHandler):
-
-   def __init__(self):
        # By default, logging.StreamHandler uses sys.stderr if stream parameter is not specified
-       logging.StreamHandler.__init__(self)
-
+    
        self.__firehose = None
-       self.__stream_buffer = []
+       self.__stream_buffer = {}
+       self.producers = {}          # holds key: value (DICT)  .. streamname: Producer
+       self.stream_names = []
+       self.BATCH_SIZE = 20
 
        try:
            self.__firehose = boto3.client('firehose')
        except Exception:
-           print('Firehose client initialization failed.')
+           raise RuntimeError('Firehose client initialization failed.')
+       
+    def register_producer_stream(self, producer, stream_name):
+        self.stream_names.append(stream_name)
+        self.producers[stream_name] = producer
+        return True
+    
+    def begin_streams(self):
+        try:
+            for producer in self.producers:
+                # The below lines of code will start the stream on each producer
+                producer.connect_source()
+                producer.start_stream()
+        except:
+            raise RuntimeError("Failed to initialize one of the producers")
+    
+    def format(self, record: dict) -> str:
+        return json.loads(record)
+    
+    def run(self):
+        # start all the producers
+        self.begin_streams()
+        while True:
+            for stream in self.stream_names:
+                self.publish_stream()
 
-       self.__delivery_stream_name = "twitter-delivery-test"
-
-   def emit(self, record):
+    def publish_stream(self, stream_name):
        try:
-           msg = self.format(record)
-
-           if self.__firehose:
+           # some function to format the message we want to send
+           
+           stream_producer = self.producers[stream_name]
+           for i in range(self.BATCH_SIZE):
+               # read data from producer
+               try:
+                   record = stream_producer.read1()
+               except Empty:
+                   break
+               # format the record
+               msg = self.format(record)
                self.__stream_buffer.append({
-                   'Data': msg.encode(encoding="UTF-8", errors="strict")
-               })
-           else:
-               stream = self.stream
-               stream.write(msg)
-               stream.write(self.terminator)
-
-           self.flush()
-       except Exception:
-           self.handleError(record)
-
-   def flush(self):
-       self.acquire()
-
-       try:
+                    'Data': msg.encode(encoding="UTF-8", errors="strict")
+                             })
+               
+            # Once we have the tweets, publish them
+            
            if self.__firehose and self.__stream_buffer:
                self.__firehose.put_record_batch(
-                   DeliveryStreamName=self.__delivery_stream_name,
-                   Records=self.__stream_buffer
+                   DeliveryStreamName = stream_name,
+                   Records = self.__stream_buffer
                )
-
+               # clear the list for new stream
                self.__stream_buffer.clear()
-       except Exception as e:
-           print("An error occurred during flush operation.")
-           print(f"Exception: {e}")
-           print(f"Stream buffer: {self.__stream_buffer}")
-       finally:
-           if self.stream and hasattr(self.stream, "flush"):
-               self.stream.flush()
+           
+       except Exception:
+           raise RuntimeError(f"Error in putting the data to Kinesis, for streamname: {stream_name}")
 
-           self.release()
-           
-           
-config = {
-  "version": 1,
-  "disable_existing_loggers": False,
-  "formatters": {
-      "standard": {
-          "format": "%(asctime)s %(name)s %(levelname)s %(message)s",
-          "datefmt": "%Y-%m-%dT%H:%M:%S%z",
-      },
-      "json": {
-          "format": "%(asctime)s %(name)s %(levelname)s %(message)s",
-          "datefmt": "%Y-%m-%dT%H:%M:%S%z",
-          "class": "pythonjsonlogger.jsonlogger.JsonFormatter"
-      }
-  },
-  "handlers": {
-      "standard": {
-          "class": "logging.StreamHandler",
-          "formatter": "json"
-      },
-      "kinesis": {
-          "class": "tweet-producer.KinesisFirehoseDeliveryStreamHandler",
-          "formatter": "json"
-      }
-  },
-  "loggers": {
-      "": {
-          "handlers": ["standard", "kinesis"],
-          "level": logging.INFO
-      }
-  }
-}
-           
     
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-    logging.config.dictConfig(config)
-    logger = logging.getLogger(__name__)
+    # logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+    # logging.config.dictConfig(config)
+    # logger = logging.getLogger(__name__)
+    
     tweet_producer = TweetProducer()
-    for tweet in tweet_producer.generate_tweets():
-        if type(tweet) == str:
-            logger.info(tweet)
+    
+    handler = KinesisFirehoseDeliveryJsonStreamHandler()
+    handler.publish_stream(tweet_producer, "test")
+    handler.run()
+    
+    
  
