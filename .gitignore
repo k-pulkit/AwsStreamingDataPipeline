@@ -2,3 +2,4 @@ libs/*
 env/*
 .vscode/*
 __pycache__/*
+kinesisFirehose/producers/producertwitterstream/keys.py
