@@ -15,17 +15,18 @@ def lambda_handler(event, context):
         # calculation for sentiment score, as most are neutral
         total = sentiment_all['SentimentScore']['Positive'] - sentiment_all['SentimentScore']['Negative']
         # return results
-        return sentiment, total
+        return sentiment, total, sentiment_all['SentimentScore']['Positive'], sentiment_all['SentimentScore']['Negative']
     
     for record in event['records']:
         recordId = record['recordId']
         print(record['data'])
         data = json.loads(base64.b64decode(record['data']).decode('utf-8').strip())    # loads data as a python dict
         text = data.pop('text')
+        hashcash = data['hashcashtags']
         result = 'Ok'
         
         # logic to drop the frame
-        if data['sensitive']:
+        if (data['sensitive']) and (len(hashcash) == 0):
             result = 'Dropped'
             print("Dropping the record")
             
@@ -33,11 +34,13 @@ def lambda_handler(event, context):
             # call the amazon comprehend service
             print("Calling the aws comprehend service")
             try:
-                s, t = get_sentiment(text)
+                s, t, p, n = get_sentiment(text)
                 data['tweet_text'] = {
                 'text': text,
                 'sentiment': s,
-                'total': t
+                'total': t,
+                'positive': p,
+                'negative': n
                 }
                 print("Sentiment Analysis Done")
                 print(data['tweet_text'])
