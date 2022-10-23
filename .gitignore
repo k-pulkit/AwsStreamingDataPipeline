@@ -1,5 +1,5 @@
 libs/*
 env/*
 .vscode/*
-__pycache__/*
+*.pyc
 kinesisFirehose/producers/producertwitterstream/keys.py
