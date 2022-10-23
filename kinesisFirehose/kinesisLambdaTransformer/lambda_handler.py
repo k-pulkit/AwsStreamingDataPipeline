@@ -51,7 +51,8 @@ def lambda_handler(event, context):
             data['tweet_text'] = {'text': text}
         
         # make the data base64 compatible
-        data = base64.b64encode(json.dumps(data).encode('UTF-8'))    # .decode('utf-8')
+        _data =  json.dumps(data) + '\n'   # So that all records are in different lines
+        data = base64.b64encode(_data.encode('UTF-8'))    # .decode('utf-8')
         
         output_record = {
             'recordId': recordId,
@@ -63,4 +64,4 @@ def lambda_handler(event, context):
     
     print(output)
     return {'records': output}
-    
+        
