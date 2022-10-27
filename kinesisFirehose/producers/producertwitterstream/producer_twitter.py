@@ -58,7 +58,7 @@ class TweetProducer(Producer):
         console_handler = logging.StreamHandler()
         cw_handler = watchtower.CloudWatchLogHandler(
                 log_group='pknn-twit-api-1',
-                stream_name='python-script' + str(time.time()))
+                stream_name='python-script' + str(time.time()))  # type: ignore
         
         # add handlers
         self.logger.addHandler(console_handler)
