@@ -1,6 +1,6 @@
 import os, os.path, sys
-sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
-sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__))))
+print(os.path.realpath(__file__))
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), "producertwitterstream"))
 
 import boto3
 from producertwitterstream.producer_twitter import TweetProducer

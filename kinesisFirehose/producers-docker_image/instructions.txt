@@ -2,3 +2,4 @@
 2. Create the image using
 
 docker build -f ./producers-docker_image/Dockerfile -t pknn-twitterpull-python:v1 .
+docker run --rm --name test -it -v ~/.aws:/root/.aws:ro pknn-twitterpull-python:v1
