@@ -1,4 +1,4 @@
-import os.path, sys
+import os, os.path, sys
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__))))
 
@@ -11,8 +11,10 @@ from keys import *
 import pandas as pd
 import re
 from queue import Queue as Q
+from queue import Empty
 import ast
 import time
+import watchtower
 
 class TClient(tw.StreamingClient):
     def __init__(self, *args, **kwargs):
@@ -50,6 +52,18 @@ class TweetProducer(Producer):
         
         # stream specific variables below
         self.logger = logging.getLogger("TWEET PRODUCER")
+        self.logger.setLevel(logging.INFO)
+        
+        # handlers for logging
+        console_handler = logging.StreamHandler()
+        cw_handler = watchtower.CloudWatchLogHandler(
+                log_group='pknn-twit-api-1',
+                stream_name='python-script' + str(time.time()))
+        
+        # add handlers
+        self.logger.addHandler(console_handler)
+        self.logger.addHandler(cw_handler)
+        
         self.logger.info("Reading list of stocks to pull")
         df = pd.read_csv(os.path.join(os.path.dirname(os.path.realpath(__file__)), "sp500.csv")).iloc[:100]
         print(df.head(), "\n")
@@ -73,7 +87,7 @@ class TweetProducer(Producer):
         
         # Delete rules from previous runs
         try:
-            existing_rules = [i.id for i in self.client.get_rules().data]
+            existing_rules = [i.id for i in self.client.get_rules().data]  # type: ignore
             self.client.delete_rules(existing_rules)
         except:
             pass
@@ -97,27 +111,32 @@ class TweetProducer(Producer):
     def start_stream(self):
         tweet_fields = ['created_at', 'text', \
             'geo', 'lang', 'referenced_tweets', 'organic_metrics', 'public_metrics', 'possibly_sensitive', 'in_reply_to_user_id']
-        self.stream_process = multiprocessing.Process(target=self.client.filter, kwargs={'tweet_fields': tweet_fields})
+        self.stream_process = multiprocessing.Process(target=self.client.filter, kwargs={'tweet_fields': tweet_fields})  # type: ignore
         self.stream_process.daemon=True
         self.stream_process.start()
         self.logger.info("Streaming has been started")
         return True
         
     def read1(self):
-        if self.stream_process.is_alive():
+        if self.stream_process.is_alive():  # type: ignore
             # get_nowait will throw Empty error if no elements in the queue
-            return self.process_queue.get_nowait()
+            out = self.process_queue.get_nowait()
+            self.logger.info(out)
+            return out
         else:
             raise RuntimeError("Stream is no longer alive")
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    # logging.basicConfig(level=logging.INFO)
     
     producer = TweetProducer()
     producer.connect_source()
     producer.start_stream()
     
-    for i in range(20):
-        print(producer.read1())
+    for i in range(200):
+        try:
+            print(producer.read1())
+        except Empty:
+            pass
         time.sleep(2)
         
