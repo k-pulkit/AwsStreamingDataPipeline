@@ -1,0 +1,4 @@
+1. Go to parent folder
+2. Create the image using
+
+docker build -f ./producers-docker_image/Dockerfile -t pknn-twitterpull-python:v1 .
