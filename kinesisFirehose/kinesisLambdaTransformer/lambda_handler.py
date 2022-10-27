@@ -26,7 +26,7 @@ def lambda_handler(event, context):
         result = 'Ok'
         
         # logic to drop the frame
-        if (data['sensitive']) and (len(hashcash) == 0):
+        if (data['sensitive']) or (len(hashcash) == 0):
             result = 'Dropped'
             print("Dropping the record")
             
