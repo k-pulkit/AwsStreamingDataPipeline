@@ -2,4 +2,4 @@ libs/*
 env/*
 .vscode/*
 *.pyc
-kinesisFirehose/producers/producertwitterstream/keys.py
+kinesisFirehose/producers/producertwitterstream/keys*.py
