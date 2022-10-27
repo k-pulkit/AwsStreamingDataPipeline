@@ -1,12 +1,14 @@
+import os, os.path, sys
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__))))
+
 import boto3
 from producertwitterstream.producer_twitter import TweetProducer
-import multiprocessing
 import logging
 from time import sleep
 import json
-import pythonjsonlogger
 import logging.config
-import sys
+import watchtower
 from queue import Empty
 
 class Formatter():
@@ -28,11 +30,14 @@ class KinesisFirehoseDeliveryJsonStreamHandler():
        self.producers = {}          # holds key: value (DICT)  .. streamname: Producer
        self.stream_names = []
        self.BATCH_SIZE = 800
+       self.logger = logging.getLogger("TWEET PRODUCER")
 
        try:
            self.__firehose = boto3.client('firehose', region_name='us-east-1')
        except Exception:
-           raise RuntimeError('Firehose client initialization failed.')
+           msg = 'Firehose client initialization failed.'
+           self.logger.error(msg)
+           raise RuntimeError(msg)
        
     def register_producer_stream(self, producer, stream_name):
         self.stream_names.append(stream_name)
@@ -96,9 +101,10 @@ if __name__ == "__main__":
     # logger = logging.getLogger(__name__)
     
     tweet_producer = TweetProducer()
+    STREAM_NAME = "pknn-stream-firehose-twitapi-ingest-toS3"
     
     handler = KinesisFirehoseDeliveryJsonStreamHandler()
-    handler.register_producer_stream(tweet_producer, "test")
+    handler.register_producer_stream(tweet_producer, STREAM_NAME)
     handler.run()
     
     
