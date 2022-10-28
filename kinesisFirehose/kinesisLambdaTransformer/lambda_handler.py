@@ -22,17 +22,18 @@ def lambda_handler(event, context):
         print(record['data'])
         data = json.loads(base64.b64decode(record['data']).decode('utf-8').strip())    # loads data as a python dict
         text = data.pop('text')
-        hashcash = data['hashcashtags']
+        hashcash = data['tweet_meta']['hashcashtags'] + data.get('reference_tweets', {}).get('hashcashtags', [])
         result = 'Ok'
         
         # logic to drop the frame
-        if (data['sensitive']) or (len(hashcash) == 0):
+        if (data['tweet_meta']['sensitive']) or (len(hashcash) == 0):
             result = 'Dropped'
-            print("Dropping the record")
+            print(f"Dropping the record: tweet_id: {data['tweet_id']} of tweet_type {data['tweet_meta']['tweet_type']}")
             
         if result == 'Ok':
             # call the amazon comprehend service
             print("Calling the aws comprehend service")
+            # get the sentiment for the tweet text
             try:
                 s, t, p, n = get_sentiment(text)
                 data['tweet_text'] = {
@@ -44,6 +45,21 @@ def lambda_handler(event, context):
                 }
                 print("Sentiment Analysis Done")
                 print(data['tweet_text'])
+                
+                # get sentiment for nested tweet
+                if data.get('reference_tweets', None) is not None:
+                    text2 = data['reference_tweets'].pop('text')
+                    s, t, p, n = get_sentiment(text2)
+                    data['reference_tweets']['tweet_text'] = {
+                        'text': text,
+                        'sentiment': s,
+                        'total': t,
+                        'positive': p,
+                        'negative': n
+                        }
+                    print("Sentiment Analysis Done for nested tweet")
+                    print(data['reference_tweets']['tweet_text'])
+                
             except Exception as e:
                 print("Could not get the sentiment")
                 print(e)
