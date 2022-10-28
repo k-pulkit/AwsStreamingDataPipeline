@@ -123,7 +123,7 @@ class TweetProducer(Producer):
         
         # handlers for logging
         console_handler = logging.StreamHandler()
-        cw_handler = watchtower.CloudWatchLogHandler(
+        cw_handler = watchtower.CloudWatchLogHandler(\
                 log_group='pknn-twit-api-1',
                 stream_name='python-script' + str(time.time()))  # type: ignore
         
