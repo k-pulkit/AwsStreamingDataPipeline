@@ -7,46 +7,113 @@ from typing import overload
 from AbsProducer import Producer
 import tweepy as tw
 import logging
-from keys import *
+from keys2 import *
 import pandas as pd
 import re
 from queue import Queue as Q
 from queue import Empty
 import ast
 import time
+from datetime import timezone
 import watchtower
 
 class TClient(tw.StreamingClient):
     def __init__(self, *args, **kwargs):
+        """
+        Inititlizes the parent class, and sets up Queue where the results are pushed to be consumed by
+        the main process
+        """
         self._process_queue = kwargs.pop('processQueue')
         self._i = 0
         super(TClient, self).__init__(*args, **kwargs)
+        
+        self.__client_v1 = None      # client for the Twitter1.1 api calls
+        self.__auth = None
+        self.logger = logging.getLogger("TWEET PRODUCER")
     
     def on_connect(self):
-        print("Connected")
+        """
+        Once connection is established, we start another client for Twitterv1.1 API interface
+        """
+        print("Connected to Twitterv2")
+        
+        # initialize client for Twitterv1 to enrich tweets
+        self.__auth = tw.OAuth1UserHandler(API_KEY, API_SECRET_KEY, ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
+        self.__client_v1 = tw.API(self.__auth)
+        self.logger.info("Connection verification for Twitter1.1 " + self.__client_v1.verify_credentials().screen_name)
+        
+    def __helper_on_tweet(self, tweet_id):
+        """
+        Used to enrich the non-original tweets
+        with the tweet text for the main tweet
+        """
+        get_twit = lambda id: self.__client_v1.get_status(id)        # type: ignore
+        get_par_twit_id = lambda r: r.in_reply_to_status_id
+        is_original = lambda r: r.in_reply_to_status_id is None
+        
+        id = tweet_id
+        DEPTH = 3
+        while DEPTH >=0:
+            # code
+            try:
+                twit = get_twit(id)
+            except Exception as e:
+                self.logger.warn(f"Tweet not found, id: {id}")
+                break
+            if not is_original:
+                id = get_par_twit_id(twit)
+            else:
+                return {
+                    'tweet_id': twit.id,
+                    'tweet_type': 'original',
+                    'text': twit.text
+                }            
+            DEPTH -= 1
+        
+        return None
         
     def on_tweet(self, tweet):
+        """
+        This function is called when a new Tweet is received by the stream.
+        We extract all the attributes and stage them in required format for consumption later
+        
+        Change - 
+        For the tweets that are not original, we call a helper method to get the original tweet
+        This, will help to produce cash and hashtag for the tweet even if user text had none.
+        """
         if type(tweet.referenced_tweets) is list:
             rtype = 'original' if not tweet.referenced_tweets[0] else tweet.referenced_tweets[0].type
         else:
             rtype = 'original' if not tweet.referenced_tweets else tweet.referenced_tweets.type
-        pattern = re.compile('[#|\$]\w+')
+        pattern = re.compile('[#|\$](\w+)')   # Only extract the symbol not # or $
         res = {
+            'tweet_id': tweet.id,
+            'author_id': tweet.author_id,
             'text': tweet.text,
-            'tweet_type': rtype,
-            'sensitive': tweet.possibly_sensitive,
-            'created_at': time.asctime(tweet.created_at.timetuple()),
-            'hashcashtags': [i.upper() for i in pattern.findall(tweet.text)]
+            'tweet_meta': {
+                'created_at': tweet.created_at.replace(tzinfo=timezone.utc).timestamp(),     # convert timestamp to utc epoch
+                                                                                             # datetime.utcfromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
+                'tweet_type': rtype,
+                'sensitive': tweet.possibly_sensitive,
+                'hashcashtags': list(set([i.upper() for i in pattern.findall(tweet.text)]))  # Make a unique list
+            }                                                # contains detail of parent tweets for non-original tweets
         }
+        
+        if rtype != 'original':
+            o = self.__helper_on_tweet(tweet.id)
+            if o:
+                o['hashcashtags'] = list(set([i.upper() for i in pattern.findall(o['text'])]))  # type: ignore
+                res['reference_tweets'] = o
         
         self._i += 1
         print(f"Adding new tweet to queue: #{self._i}")
-        logging.info(f"Adding new tweet to queue: #{self._i}")
+        self.logger.info(f"Adding new tweet to queue: #{self._i}")
         self._process_queue.put(res)
         
 class TweetProducer(Producer):
     def __init__(self):
         self.client = None
+        
         self.stream_process = None
         self.process_queue = multiprocessing.Queue()
         
@@ -65,7 +132,7 @@ class TweetProducer(Producer):
         self.logger.addHandler(cw_handler)
         
         self.logger.info("Reading list of stocks to pull")
-        df = pd.read_csv(os.path.join(os.path.dirname(os.path.realpath(__file__)), "sp500.csv")).iloc[:100]
+        df = pd.read_csv(os.path.join(os.path.dirname(os.path.realpath(__file__)), "sp500v2.csv")).iloc[:100]
         print(df.head(), "\n")
         self.logger.info("Creating symbol list to search on twitter")
         self.symbols_list = df.Symbol.map(lambda x: '$'+x).to_list()\
@@ -109,8 +176,8 @@ class TweetProducer(Producer):
         self.logger.info(self.client.get_rules())
     
     def start_stream(self):
-        tweet_fields = ['created_at', 'text', \
-            'geo', 'lang', 'referenced_tweets', 'organic_metrics', 'public_metrics', 'possibly_sensitive', 'in_reply_to_user_id']
+        tweet_fields = ['id', 'author_id', 'created_at', 'text', \
+            'geo', 'lang', 'referenced_tweets', 'conversation_id', 'organic_metrics', 'public_metrics', 'possibly_sensitive', 'in_reply_to_user_id']
         self.stream_process = multiprocessing.Process(target=self.client.filter, kwargs={'tweet_fields': tweet_fields})  # type: ignore
         self.stream_process.daemon=True
         self.stream_process.start()
