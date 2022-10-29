@@ -7,7 +7,7 @@ from typing import overload
 from AbsProducer import Producer
 import tweepy as tw
 import logging
-from keys import *
+from keys2 import *
 import pandas as pd
 import re
 from queue import Queue as Q
@@ -51,8 +51,8 @@ class TClient(tw.StreamingClient):
         get_par_twit_id = lambda r: r.in_reply_to_status_id
         is_original = lambda r: r.in_reply_to_status_id is None
         
-        id = tweet_id
-        DEPTH = 3
+        id = get_par_twit_id(get_twit(tweet_id))   # start with parent tweet
+        DEPTH = 4
         while DEPTH >=0:
             # code
             try:
@@ -60,7 +60,7 @@ class TClient(tw.StreamingClient):
             except Exception as e:
                 self.logger.warn(f"Tweet not found, id: {id}")
                 break
-            if not is_original:
+            if not is_original(twit):
                 id = get_par_twit_id(twit)
             else:
                 return {
