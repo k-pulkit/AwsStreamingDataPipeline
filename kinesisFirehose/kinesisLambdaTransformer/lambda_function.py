@@ -1,6 +1,12 @@
-import boto3
+# import boto3
 import base64
 import json
+from helper import get_sentiment
+
+"""
+For execution in AWS lambda env.
+Set the env variable to /opt/python/nltk_data : NLTK_DATA
+"""
 
 print("Starting function execution")
 
@@ -8,16 +14,16 @@ def lambda_handler(event, context):
     
     output = []
     
-    ## Dropping the use of comprehend service as way too costly for the value it provides
-    # comprehend = boto3.client(service_name='comprehend', region_name='us-east-1')
-    # def get_sentiment(text):
-    #     sentiment_all = comprehend.detect_sentiment(Text=text, LanguageCode='en')
-    #     sentiment = sentiment_all['Sentiment']
-    #     # calculation for sentiment score, as most are neutral
-    #     total = sentiment_all['SentimentScore']['Positive'] - sentiment_all['SentimentScore']['Negative']
-    #     # return results
-    #     return sentiment, total, sentiment_all['SentimentScore']['Positive'], sentiment_all['SentimentScore']['Negative']
-    
+    # Dropping the use of comprehend service as way too costly for the value it provides
+        # comprehend = boto3.client(service_name='comprehend', region_name='us-east-1')
+        # def get_sentiment(text):
+        #     sentiment_all = comprehend.detect_sentiment(Text=text, LanguageCode='en')
+        #     sentiment = sentiment_all['Sentiment']
+        #     # calculation for sentiment score, as most are neutral
+        #     total = sentiment_all['SentimentScore']['Positive'] - sentiment_all['SentimentScore']['Negative']
+        #     # return results
+        #     return sentiment, total, sentiment_all['SentimentScore']['Positive'], sentiment_all['SentimentScore']['Negative']
+        
     for record in event['records']:
         recordId = record['recordId']
         print(record['data'])
@@ -33,7 +39,7 @@ def lambda_handler(event, context):
             
         if result == 'Ok':
             # call the amazon comprehend service
-            print("Calling the aws comprehend service")
+            print("Invoking the sentiment function")
             # get the sentiment for the tweet text
             try:
                 s, t, p, n = get_sentiment(text)

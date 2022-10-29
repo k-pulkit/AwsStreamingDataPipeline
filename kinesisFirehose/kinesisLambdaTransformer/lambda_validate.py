@@ -1,5 +1,5 @@
 
-from lambda_handler import lambda_handler
+from lambda_function import lambda_handler
 import json
 import base64
 
