@@ -48,8 +48,8 @@ def lambda_handler(event, context):
                 
                 # get sentiment for nested tweet
                 if data.get('reference_tweets', None) is not None:
-                    text2 = data['reference_tweets'].pop('text')
-                    s, t, p, n = get_sentiment(text2)
+                    text = data['reference_tweets'].pop('text')
+                    s, t, p, n = get_sentiment(text)
                     data['reference_tweets']['tweet_text'] = {
                         'text': text,
                         'sentiment': s,
