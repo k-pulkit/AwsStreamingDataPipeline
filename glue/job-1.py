@@ -60,8 +60,7 @@ if __name__ == "__main__":
     etl.run(database_name="twitter_capstone_project_rawzone", \
                 table_name="raw_tweets_json", \
                     s3_output_path="s3://pknn-test-bucket-1/raw_tweets_parquet", \
-                        partitions=['year', 'month', 'day'], \
-                        push_down_predicate="day=29 and hour=21")
+                        partitions=['year', 'month', 'day'])
     
     etl.run(database_name="twitter_capstone_project_rawzone", \
                 table_name="sp500", \
