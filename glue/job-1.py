@@ -1,11 +1,12 @@
-import sys
-from awsglue.transforms import *
-from awsglue.dynamicframe import DynamicFrame
-from awsglue.utils import getResolvedOptions
+# type: ignore
 
-from pyspark.context import SparkContext
-from awsglue.context import GlueContext
-from awsglue.job import Job
+import sys
+from awsglue.transforms import *                
+from awsglue.dynamicframe import DynamicFrame   
+from awsglue.utils import getResolvedOptions   
+from pyspark.context import SparkContext             
+from awsglue.context import GlueContext             
+from awsglue.job import Job                
 
 class InitializeGlue(object):
     def __init__(self):
@@ -59,12 +60,12 @@ if __name__ == "__main__":
     etl = GlueETL_toParquet()
     etl.run(database_name="twitter_capstone_project_rawzone", \
                 table_name="raw_tweets_json", \
-                    s3_output_path="s3://pknn-test-bucket-1/raw_tweets_parquet", \
-                        partitions=['year', 'month', 'day'])
+                    s3_output_path="s3://pknn-aws-twitter-stage-zone/stage1/data/raw_tweets_parquet", \
+                        partitions=['year', 'month', 'day', 'hour'])
     
     etl.run(database_name="twitter_capstone_project_rawzone", \
                 table_name="sp500", \
-                        s3_output_path="s3://pknn-test-bucket-1/sp500")
+                        s3_output_path="s3://pknn-aws-twitter-stage-zone/stage1/data/sp500_parquet")
     
     etl.commit()
     
