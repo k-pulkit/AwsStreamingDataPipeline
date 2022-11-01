@@ -1,0 +1,11 @@
+For giving an introduction to our project, we created a website using cloud technologies.
+
+From beginning we decided to use Twitter API for collocting our raw data for website.
+Initially, we created a python code which extracts data from Twitter API to Kinesis firehose. 
+Kinesis is an AWS service which is used to collect live streaming data from Twitter API. We created docker images using Amazon ECS which helps us to create container with container repository.
+
+Once we created it, we sent our data to S3 bucket which is used to store our data.After that the data was transfered to Amazon glue Catalog and then to perform glue job on it. Firstly data was transfered from JSON to parche.The same process was repeated with data again sent to glue job from S3 bucket with this time the data being cleaned. Lastly, it was back to S3 bucket.
+
+We have reached till here currently. Our next task is to sent the data to DynamoDB with the help of Lambda function. Lambda function is nothing but a serverless code written to execute at certain required time. DynamoDB will be used as our NoSQL databse for applying queries to it.
+
+Thereafter the data will be sent to REST API and then the final website will be created. 
