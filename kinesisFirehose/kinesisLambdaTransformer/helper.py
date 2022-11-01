@@ -1,3 +1,5 @@
+# type: ignore
+
 # Add the libs to the path of execution for local execution
 from nltk.sentiment.vader import SentimentIntensityAnalyzer  
 
