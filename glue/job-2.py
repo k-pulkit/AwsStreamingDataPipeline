@@ -71,10 +71,10 @@ if __name__ == "__main__":
     DATABASE_SOURCE_0 = "twitter_capstone_project_stagezone_stage1"
     TABLE_SOURCE_0_0 = "raw_tweets_parquet"
     TABLE_SOURCE_0_1 = "sp500_parquet"
+    # push_down_predicate="day=30 and hour=01",
     datasource0 = GlueContext.create_dynamic_frame_from_catalog(database=DATABASE_SOURCE_0,
                                                                 table_name=TABLE_SOURCE_0_0,
                                                                 transformation_ctx='datasource0',
-                                                                push_down_predicate="day=30 and hour=01",
                                                                 additional_options={'groupFiles': helper.groupFilesStrategy, 'groupSize': helper.groupSize})
     
     if datasource0.toDF().rdd.isEmpty():
