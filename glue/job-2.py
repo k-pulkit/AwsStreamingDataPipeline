@@ -1,3 +1,5 @@
+# type:ignore
+
 """
 Name - Job-2
 GlueJobName - pknn-aws-twitter-Job-2-cleanData
