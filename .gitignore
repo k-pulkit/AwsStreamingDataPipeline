@@ -4,3 +4,4 @@ env/*
 *.pyc
 kinesisFirehose/producers/producertwitterstream/keys*.py
 kinesisFirehose/kinesisLambdaTransformer/lambda_env/*
+front-end/*/env/*
