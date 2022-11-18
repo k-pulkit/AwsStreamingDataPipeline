@@ -5,3 +5,4 @@ env/*
 kinesisFirehose/producers/producertwitterstream/keys*.py
 kinesisFirehose/kinesisLambdaTransformer/lambda_env/*
 front-end/*/env/*
+front-end/application/data/conf.ini
