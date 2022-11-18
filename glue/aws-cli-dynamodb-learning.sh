@@ -34,4 +34,18 @@ aws dynamodb query --table-name demo1 \
             --expression-attribute-names '{"#month": "month"}' \
             --expression-attribute-values '{":mon": {"N": "1"}, ":tick": {"S": "GOOGL"} }'
 
+############# TESTING QUERY ###############
+aws dynamodb query --table-name pknn-twitter-capstone-project-table-1 \
+        --index-name IndexByTickerTime\
+        --no-scan-index-forward\
+        --limit 4\
+        --key-condition-expression 'TickerDetail = :tick'\
+            --expression-attribute-values '{":tick": {"S": "AAPL_HOURLY"}}'
 
+aws dynamodb query --table-name pknn-twitter-capstone-project-table-1 \
+        --index-name IndexByTickerTime\
+        --no-scan-index-forward\
+        --limit 4\
+        --key-condition-expression 'TickerDetail = :tick AND #stamp > :time'\
+            --expression-attribute-names '{"#stamp": "TIMESTAMP"}'\
+            --expression-attribute-values '{":tick": {"S": "AAPL_HOURLY"}, ":time": {"S": "2022-10-30 20:02:19.1250968576"}}'
