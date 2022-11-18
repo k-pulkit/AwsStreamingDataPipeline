@@ -206,7 +206,7 @@ if __name__ == "__main__":
                 #@ TableName - cleaned_tweets_parquet
                 # LOADTYPE - INCREMENTAL
                 # Using pushdown predicate to only process upto Current Hour - 2
-                pred = datetime.datetime.utcnow().strftime("year <= %Y and month <= %m and day <= %d and hour < %H")
+                pred = datetime.datetime.utcnow().strftime("year <= %Y and month <= %m and day < %d")   #  and hour < %H
                 print("Using the predicate while reading - ", pred)
                 dyf = GlueContext.create_dynamic_frame_from_catalog(database=DATABASE_SOURCE_0,\
                                                                         table_name=TABLE_SOURCE_0_0,\
@@ -218,6 +218,13 @@ if __name__ == "__main__":
                 if dyf.toDF().rdd.isEmpty():
                         print("Exiting as no new data to process")
                         sys.exit()
+
+                # Also load full data for metric table
+                dyf_full = GlueContext.create_dynamic_frame_from_catalog(database=DATABASE_SOURCE_0,\
+                                                                        table_name=TABLE_SOURCE_0_0,\
+                                                                        #transformation_ctx='datasource0',\
+                                                                        push_down_predicate=pred,\
+                                                                        additional_options={'groupFiles': helper.groupFilesStrategy, 'groupSize': helper.groupSize})
                 
                 print("Schema of the input dataframes")
                 dyf.printSchema()
@@ -264,16 +271,17 @@ if __name__ == "__main__":
                 """
                 PART 3 of Job3, for the top dashboard metrics
                 Fetch the metrics associated with tweets
+                Make use of FULL DATA
                 """
                 base_mapping = [
                                 ('mentions', 'long', 'NUM_MENTIONS', 'long'),
                                 ('positive', 'long', 'NUM_POSITIVE', 'long'),
                                 ('negative', 'long', 'NUM_NEGATIVE', 'long'),
                                 ('neutral', 'long', 'NUM_NEUTRAL', 'long')]
-                dyf_3_year = transformation4(dyf, ["year"], "yearly", GlueContext, "transform1", base_mapping)
-                dyf_3_month = transformation4(dyf, ["year", "month"], "monthly", GlueContext, "transform1", base_mapping)
-                dyf_3_day = transformation4(dyf, ["year", "month", "day"], "daily", GlueContext, "transform1", base_mapping)
-                dyf_3_hour = transformation4(dyf, ["year", "month", "day", "hour"], "hourly", GlueContext, "transform1", base_mapping)
+                dyf_3_year = transformation4(dyf_full, ["year"], "yearly", GlueContext, "transform1", base_mapping)
+                dyf_3_month = transformation4(dyf_full, ["year", "month"], "monthly", GlueContext, "transform1", base_mapping)
+                dyf_3_day = transformation4(dyf_full, ["year", "month", "day"], "daily", GlueContext, "transform1", base_mapping)
+                dyf_3_hour = transformation4(dyf_full, ["year", "month", "day", "hour"], "hourly", GlueContext, "transform1", base_mapping)
                 # Combine into 1 DynamicFrame
                 _ = [dyf_3_year, dyf_3_month, dyf_3_day, dyf_3_hour] 
                 df_3 = transformation2(_, GlueContext, "transform2_").toDF()
