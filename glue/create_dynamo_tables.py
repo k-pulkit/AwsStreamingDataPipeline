@@ -8,21 +8,35 @@ if __name__ == '__main__':
     dynamodb = boto3.resource('dynamodb')
 
     # create a new table
+    """
+    Table 1 - Contains the data used for plotting the Section 1 charts in front-end
+    , which is the leaderboard, where we show which stocks have more mentions etc.
+    """
     try:
-        dynamodb.create_table( TableName='demo2',  # type: ignore
+        TABLENAME = "pknn-twitter-capstone-project-table-1"
+        print(f"Table creation in progress - {TABLENAME}")
+        dynamodb.create_table( TableName=TABLENAME,  # type: ignore
             AttributeDefinitions=[
                 {
                     'AttributeName': 'TICKER',
                     'AttributeType': 'S'
                 },
                 {
-                    'AttributeName': 'MONTH',
-                    'AttributeType': 'N'
+                    'AttributeName': 'DetailLevel',
+                    'AttributeType': 'S'
+                },
+                {
+                    'AttributeName': 'TickerDetail',
+                    'AttributeType': 'S'
+                },
+                 {
+                    'AttributeName': 'TIMESTAMP',
+                    'AttributeType': 'S'
                 }
                     ],
             KeySchema=[
                 {
-                    'AttributeName': 'MONTH',
+                    'AttributeName': 'DetailLevel',
                     'KeyType': 'HASH'
                 },
                 {
@@ -35,30 +49,109 @@ if __name__ == '__main__':
                     'IndexName': 'IndexByTickerTime',
                     'KeySchema': [
                         {
-                            'AttributeName': 'TICKER',
+                            'AttributeName': 'TickerDetail',
                             'KeyType': 'HASH'
                         },
                         {
-                            'AttributeName': 'MONTH',
+                            'AttributeName': 'TIMESTAMP',
                             'KeyType': 'RANGE'
                         }
                         ],
                     'Projection': {
-                        'ProjectionType': 'KEYS_ONLY'
+                        'ProjectionType': 'ALL'
                     }
                 }
                     ],
             BillingMode='PAY_PER_REQUEST'
         )
         
-        table = dynamodb.Table('demo2')
+        table = dynamodb.Table(TABLENAME)
         table.wait_until_exists()
-        print("Table created")
+        print(f"Table created - {TABLENAME}\n")
         
         # Initally CREATING, then ACTIVE
         print(table.table_status)
     except ClientError as e:
         if e.response['Error']['Code'] == "ResourceInUseException":
-            print("Table exists")
+            print(f"Table exists - {TABLENAME}\n")
         else:
             raise Exception(e)
+        
+    # create a new table
+    """
+    Table 2 - Contains the data used for plotting the Section 1 charts in front-end
+    , which is the leaderboard, where we show which stocks have more mentions etc.
+    """
+    try:
+        TABLENAME = "pknn-twitter-capstone-project-table-2"
+        print(f"Table creation in progress - {TABLENAME}")
+        dynamodb.create_table( TableName=TABLENAME,  # type: ignore
+            AttributeDefinitions=[
+                {
+                    'AttributeName': 'PARTITION',
+                    'AttributeType': 'S'
+                },
+                {
+                    'AttributeName': 'TIMESTAMP',
+                    'AttributeType': 'S'
+                }
+                    ],
+            KeySchema=[
+                {
+                    'AttributeName': 'PARTITION',
+                    'KeyType': 'HASH'
+                },
+                {
+                    'AttributeName': 'TIMESTAMP',
+                    'KeyType': 'RANGE'
+                }
+                    ],
+            BillingMode='PAY_PER_REQUEST'
+        )
+        
+        table = dynamodb.Table(TABLENAME)
+        table.wait_until_exists()
+        print(f"Table created - {TABLENAME}\n")
+        
+        # Initally CREATING, then ACTIVE
+        print(table.table_status)
+    except ClientError as e:
+        if e.response['Error']['Code'] == "ResourceInUseException":
+            print(f"Table exists - {TABLENAME}\n")
+        else:
+            raise Exception(e)
+    # create a new table
+    """
+    Table 3 - Contains the data used for metrics
+    """
+    try:
+        TABLENAME = "pknn-twitter-capstone-project-table-3"
+        print(f"Table creation in progress - {TABLENAME}")
+        dynamodb.create_table( TableName=TABLENAME,  # type: ignore
+            AttributeDefinitions=[
+                {
+                    'AttributeName': 'LEVEL',
+                    'AttributeType': 'S'
+                }
+                    ],
+            KeySchema=[
+                {
+                    'AttributeName': 'LEVEL',
+                    'KeyType': 'HASH'
+                }
+                    ],
+            BillingMode='PAY_PER_REQUEST'
+        )
+        
+        table = dynamodb.Table(TABLENAME)
+        table.wait_until_exists()
+        print(f"Table created - {TABLENAME}\n")
+        
+        # Initally CREATING, then ACTIVE
+        print(table.table_status)
+    except ClientError as e:
+        if e.response['Error']['Code'] == "ResourceInUseException":
+            print(f"Table exists - {TABLENAME}\n")
+        else:
+            raise Exception(e)
+        
