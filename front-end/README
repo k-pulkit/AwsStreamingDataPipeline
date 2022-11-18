@@ -1,0 +1,3 @@
+How to run ?
+Go to the application folder, and run
+streamlit run Home.py 

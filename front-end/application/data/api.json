@@ -1,0 +1,13 @@
+{
+    "API_GATEWAY": {
+        "month": {
+            "url": "{secret}/test/months/{month}"
+        },
+        "day": {
+             "url": "{secret}/test/hours/{hour}"
+        },
+        "hour": {
+
+        }
+    }
+}
