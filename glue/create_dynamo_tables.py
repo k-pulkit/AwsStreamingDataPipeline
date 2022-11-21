@@ -130,13 +130,13 @@ if __name__ == '__main__':
         dynamodb.create_table( TableName=TABLENAME,  # type: ignore
             AttributeDefinitions=[
                 {
-                    'AttributeName': 'LEVEL',
+                    'AttributeName': 'DetailLevel',
                     'AttributeType': 'S'
                 }
                     ],
             KeySchema=[
                 {
-                    'AttributeName': 'LEVEL',
+                    'AttributeName': 'DetailLevel',
                     'KeyType': 'HASH'
                 }
                     ],

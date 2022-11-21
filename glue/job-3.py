@@ -206,7 +206,8 @@ if __name__ == "__main__":
                 #@ TableName - cleaned_tweets_parquet
                 # LOADTYPE - INCREMENTAL
                 # Using pushdown predicate to only process upto Current Hour - 2
-                pred = datetime.datetime.utcnow().strftime("year <= %Y and month <= %m and day < %d")   #  and hour < %H
+                # pred = datetime.datetime.utcnow().strftime("year <= %Y and month <= %m and day < %d")   #  and hour < %H
+                pred = datetime.datetime.utcnow().strftime("(year < %Y AND month < %m) OR (year = %Y AND month = %m AND day < %d)")   #  and hour < %H
                 print("Using the predicate while reading - ", pred)
                 dyf = GlueContext.create_dynamic_frame_from_catalog(database=DATABASE_SOURCE_0,\
                                                                         table_name=TABLE_SOURCE_0_0,\
@@ -288,16 +289,14 @@ if __name__ == "__main__":
                 # Window function
                 window = Window.partitionBy(f.col('LEVEL')).orderBy(f.desc("DetailLevel"))
                 df_3 = df_3.withColumn("sno", f.row_number().over(window))\
-                                .filter('sno <= 2')\
                                 .withColumn("D_NUM_MENTIONS", f.coalesce(f.lead(f.col('NUM_MENTIONS')).over(window), f.lit(0)))\
                                 .withColumn("D_NUM_POSITIVE", f.coalesce(f.lead(f.col('NUM_POSITIVE')).over(window), f.lit(0)))\
                                 .withColumn("D_NUM_NEGATIVE", f.coalesce(f.lead(f.col('NUM_NEGATIVE')).over(window), f.lit(0)))\
-                                .withColumn("D_NUM_NEUTRAL", f.coalesce(f.lead(f.col('NUM_NEUTRAL')).over(window), f.lit(0)))\
-                                .filter('sno = 1')\
-                                .drop('sno', 'DetailLevel')
+                                .withColumn("D_NUM_NEUTRAL", f.coalesce(f.lead(f.col('NUM_NEUTRAL')).over(window), f.lit(0)))
+                                #.filter('sno = 1')\
+                                #.drop('sno', 'DetailLevel')
                 dyf_3 = DynamicFrame.fromDF(df_3, glue_ctx=GlueContext, name="metric")
                 print("Created table for Metrics")
-                
                 
                 # DATASINK 1
                 #@ TARGET - DDBTABLE-1
