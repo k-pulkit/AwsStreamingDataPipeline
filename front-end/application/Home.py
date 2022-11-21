@@ -72,10 +72,10 @@ def plot_trending(data):
     return fig
 
 def plot_trending_2(data):
-    data = data.assign(NUM_POSITVE=lambda x: x["NUM_POSITVE"]/x["NUM_MENTIONS"]\
+    data = data.assign(NUM_POSITIVE=lambda x: x["NUM_POSITIVE"]/x["NUM_MENTIONS"]\
         , NUM_NEGATIVE=lambda x: x["NUM_NEGATIVE"]/x["NUM_MENTIONS"]\
         , NUM_NEUTRAL=lambda x: x["NUM_NEUTRAL"]/x["NUM_MENTIONS"])
-    fig = px.bar(data, y='TICKER', x=['NUM_NEGATIVE', 'NUM_POSITVE', 'NUM_NEUTRAL'], title="Number of positive, negative and neutral tweets", orientation="h")
+    fig = px.bar(data, y='TICKER', x=['NUM_NEGATIVE', 'NUM_POSITIVE', 'NUM_NEUTRAL'], title="Number of positive, negative and neutral tweets", orientation="h")
     fig.update_layout({
     'plot_bgcolor': 'rgba(0,0,0,0)',
     'paper_bgcolor': 'rgba(0,0,0,0)'
@@ -115,51 +115,55 @@ with st.container():
 con1 = st.empty().container()
 con2 = st.empty().container()
 
-with con1:
-    st.subheader("Metrics")
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Total Tweets", 1000, 20)
-    col2.metric("+ve Tweets", 200, 30)
-    col3.metric("Neu Tweets", 50, -30)
-    col4.metric("-ve Tweets", 50, 40)
-
 with con2:
     st.subheader("Trending Stocks")
     # Controls for this section
     pm_month, pm_date, pm_time = None, None, None
     _1, _2, _3, _4 = st.columns(4)
     top = _1.selectbox("Top", [3, 5, 10, 15], 0) 
-    aggregationType = _2.selectbox("AggregationType", ("All", "Monthly", "Daily", "Hourly"), 0)
+    sortBy = _1.selectbox("Sort By", ["NUM_MENTIONS", "NUM_POSITIVE", "NUM_NEGATIVE", "NUM_NEUTRAL"], 0) 
+    aggregationType = _2.selectbox("AggregationType", ("Yearly", "Monthly", "Daily", "Hourly"), 0)
     if aggregationType == "Monthly":
-        _options = ["Current-0", "Current-1"]
-        pm_month = _3.selectbox("Month", _options)
+        query = _3.selectbox("Month", ["2022-10", "2022-11"])
     elif aggregationType == "Daily":
-        pm_date = _3.date_input("Date", DEFAULT_DATE,min_value=MIN_DATE, max_value=MAX_DATE)
+        query = _3.date_input("Date", DEFAULT_DATE,min_value=MIN_DATE, max_value=MAX_DATE).strftime("%Y-%m-%d")
     elif aggregationType == "Hourly":
         c1, c2 = st.columns(2)
-        pm_date = _3.date_input("Date", DEFAULT_DATE, min_value=MIN_DATE, max_value=MAX_DATE)
-        pm_time = _4.selectbox("Time", [f"{i}:00" for i in range(24)])
-    pm_month_string, pm_date_string, pm_time_string = None, pm_date, pm_time # type:ignore
-    if pm_month:
-        pm_month_string = (MAX_DATE - datetime.timedelta(days=31*int(str(pm_month).split("-")[-1]))).strftime("%m")
+        query = _3.date_input("Date", DEFAULT_DATE, min_value=MIN_DATE, max_value=MAX_DATE).strftime("%Y-%m-%d")
+        query += "-" + _4.selectbox("Time", [f"{str(i).zfill(2)}" for i in range(24)])
+    else:
+        query="2022"
     
-    # Section logic  
-    funcMap = {"Monthly": lambda x: charts.get_data_for_month(int(pm_month_string), top=x)}
-    data = funcMap["Monthly"](int(top))
+    # Section logic
+    data = charts.get_data_for_month(query, sortBy, top)
     
-    tab1, tab2 = st.tabs(["Chart", "Data"])
-    with tab1: 
-        col1, col2 = st.columns([1, 1])
-        with col1:
-            st.plotly_chart(plot_trending(data), use_container_width=True)
-        with col2:
-            st.plotly_chart(plot_trending_2(data), use_container_width=True)
-    with tab2:
-        st.write(data)
-        #st.download_button("Download", data)
-    
-   
-with st.container():
+    if data is not None:
+        tab1, tab2 = st.tabs(["Chart", "Data"])
+        with tab1: 
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                st.plotly_chart(plot_trending(data), use_container_width=True)
+            with col2:
+                st.plotly_chart(plot_trending_2(data), use_container_width=True)
+        with tab2:
+            st.write(data)
+            #st.download_button("Download", data)
+    else:
+        st.warning("Data does not exist")
+
+with con1:
+    st.subheader("Metrics")
+    col1, col2, col3, col4 = st.columns(4)
+    data = charts.table3_query1()
+    data_ = data.loc[data.DetailLevel == query]
+    st.write(data_)
+    st.write(data.loc[data.LEVEL == aggregationType.upper()])
+    col1.metric("Total Tweets", data_.NUM_MENTIONS, data_.D_NUM_MENTIONS.to_list()[0])
+    col2.metric("+ve Tweets", data_.NUM_POSITIVE, data_.D_NUM_POSITIVE.to_list()[0])
+    col3.metric("Neu Tweets", data_.NUM_NEUTRAL, data_.D_NUM_NEUTRAL.to_list()[0])
+    col4.metric("-ve Tweets", data_.NUM_NEGATIVE, data_.D_NUM_NEGATIVE.to_list()[0])
+ 
+with st.container():    
     st.markdown("-----")
     st.header("Section 2")
     st.markdown("In the second section, we want to dive deeper into individual ticker symbols. We do so by asking user input for more than one TICKER symbol and show the vizualizations to compare.")
