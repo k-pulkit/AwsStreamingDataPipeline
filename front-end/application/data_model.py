@@ -23,7 +23,7 @@ class ChartData(object):
         For metrics
         """
         table3 = self.table3
-        #@st.cache
+        @st.cache
         def _table3_query1():
             out = table3.scan()["Items"]
             return pd.json_normalize(ddb_json.loads(out))
@@ -89,7 +89,7 @@ class ChartData(object):
         return out
     
     
-    def table2_query1(self, limit=100, startTime=None, endTime=None):
+    def table2_query1(self, limit=100, startTime=None, endTime=None, filter_ticker_name=None):
         """
         For recent tweets
         """
@@ -104,12 +104,15 @@ class ChartData(object):
             base_exp += " and #stamp between :time1 and :time2"
             base_kv[":time2"] = endTime 
             base_kv[":time1"] = startTime 
+        if filter_ticker_name:
+            base_kv[":tick"] = filter_ticker_name.upper()
         corpus = []
         nextToken = None
         for part in range(4):
             _ = []
             base_kv[":part"] = str(part)
             query = partial(table2.query, KeyConditionExpression = base_exp, ExpressionAttributeNames = {"#part": "PARTITION", "#stamp": "TIMESTAMP"}, ExpressionAttributeValues = base_kv, ScanIndexForward=False, Limit=limit)
+            query = query if filter_ticker_name is None else partial(query, FilterExpression="TICKER = :tick")
             while True:
                 query_r = query(ExclusiveStartKey=nextToken) if nextToken else query()
                 items = query_r["Items"]
@@ -119,11 +122,12 @@ class ChartData(object):
                     nextToken = None
                     break
             corpus.extend(_)
+    
+        return pd.json_normalize(ddb_json.loads(corpus)).sort_values("TIMESTAMP", ascending=False).iloc[:limit].reset_index(drop=True)
         
-        return pd.json_normalize(corpus).sort_values("TIMESTAMP", ascending=False).iloc[:limit].reset_index(drop=True)
     
     def get_data_for_month(self, query, sortBy="NUM_MENTIONS", top=10):
-        #@st.cache
+        @st.cache
         def _helper(query):
             res = self.table1_query1(query)
             if len(res) == 0:
@@ -146,7 +150,7 @@ class ChartData(object):
         This method return recent tweets, either across all available,
         or, if ticker is given, then gives the recent tweets for those symbols
         """
-        #@st.cache
+        @st.cache
         def _helper(limit, start=None, end=None):
             return self.table2_query1(limit, start, end)
         df = _helper(limit, start, end)
@@ -154,6 +158,18 @@ class ChartData(object):
             return df.loc[df.TICKER == ticker].reset_index(drop=True)
         else:
             return df
+    
+    def get_recent_filtered_tweets(self, limit=10, start=None, end=None, ticker=None):
+        """
+        This method return recent tweets, either across all available,
+        or, if ticker is given, then gives the recent tweets for those symbols
+        """
+        @st.cache
+        def _helper(limit, start=None, end=None, ticker=None):
+            return self.table2_query1(limit, start, end, ticker)
+        df = _helper(limit, start, end, ticker)
+        return df
+    
             
        
        

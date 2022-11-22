@@ -39,7 +39,7 @@ def load_tickers():
     with open(x, "rb") as file:
         return pickle.load(file)
 
-#@st.experimental_singleton
+@st.experimental_singleton
 def get_chart_data_obj():
     obj = ChartData(BASE_PATH)
     return obj
@@ -105,12 +105,12 @@ def plot_recent_tweets_text(data):
     fig.update_layout(margin=dict(l=10,r=30,t=3,b=10))
     return fig
 
-def plot_timeline(data):    
+def plot_timeline(data):   
     subfig = make_subplots(specs=[[{"secondary_y": True}]])
     fig = px.area(data, x="TIMESTAMP", y=["NUM_POSITIVE", "NUM_NEGATIVE", "NUM_NEUTRAL"])
     fig2 = px.bar(data, x="TIMESTAMP", y="NUM_MENTIONS")
     fig2.update_traces(yaxis="y2",showlegend=True,name='NUM_MENTIONS')
-    if data.shape[0] > 20:
+    if data.shape[0] > 40:
         subfig.add_traces(fig.data + fig2.data)
     else:
         subfig.add_traces(fig.data)
@@ -248,8 +248,6 @@ with con3:
         #st.download_button("Download", recent_tweets, key="recentTweets")
     except IndexError:
         pass    
-            
-    
   
 with con4:
     st.subheader("Ticker Trends")
@@ -267,11 +265,22 @@ with con4:
         
     try:
         data = charts.table1_query2(tick1, level)
-        data = data.loc[data.TIMESTAMP.dt.date >= dts[0]].loc[data.TIMESTAMP.dt.date <= dts[1]]
+        if level in ('Hourly', 'Daily'):
+            data = data.loc[data.TIMESTAMP.dt.date >= dts[0]].loc[data.TIMESTAMP.dt.date <= dts[1]]
         st.plotly_chart(plot_timeline(data))
+        with st.expander("Click to read recent tweets in selected range"):
+            st.text(tick1)
+            limit = st.selectbox("Recent tweets", [10, 25, 50, 100, 500], 0, key="lim1")
+            fig = plot_recent_tweets_text(charts.get_recent_filtered_tweets(limit=limit, start=dts[0].strftime('%Y-%m-%d 00:00:00'), end=dts[1].strftime('%Y-%m-%d 24:00:00'), ticker=tick1))
+            st.plotly_chart(fig)
         if tick2 != 'None':
             data = charts.table1_query2(tick2, level)
             st.plotly_chart(plot_timeline(data))
+            with st.expander("Click to read recent tweets in selected range"):
+                st.text(tick2)
+                limit = st.selectbox("Recent tweets", [10, 25, 50, 100, 500], 0, key="lim2")
+                fig = plot_recent_tweets_text(charts.get_recent_filtered_tweets(limit=limit, start=dts[0].strftime('%Y-%m-%d 00:00:00'), end=dts[1].strftime('%Y-%m-%d 24:00:00'), ticker=tick2))
+                st.plotly_chart(fig)
     except IndexError:
         pass
         
