@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 from plotly.colors import n_colors
 from wordcloud import WordCloud
 from warnings import filterwarnings
@@ -86,15 +87,16 @@ def plot_recent_tweets_text(data):
     sentiment_ = {"POSITIVE": "green", "NEGATIVE": "red", "NEUTRAL": "lightskyblue"}
     x = list(map(lambda s: sentiment_[s], data.SENTIMENT))
     fig = go.Figure(data=[go.Table(
+                            columnwidth = [80,400],
                             header=dict(
-                                values=['<b>Tweet text for recent tweets</b>'],
+                                values=['TICKER', 'Tweet text for recent tweets'],
                                 line_color='white', fill_color='white',
                                 align='center',font=dict(color='black', size=20)
                             ),
                             cells=dict(
-                                values=[data.TEXT],
+                                values=[data.TICKER, data.TEXT],
                                 line_color=["white"],
-                                fill_color=[x],
+                                fill_color=[x, x],
                                 align='left', font=dict(color='black', size=13, family="lato"),
                                 height=35
                                 ))
@@ -102,6 +104,21 @@ def plot_recent_tweets_text(data):
     
     fig.update_layout(margin=dict(l=10,r=30,t=3,b=10))
     return fig
+
+def plot_timeline(data):    
+    subfig = make_subplots(specs=[[{"secondary_y": True}]])
+    fig = px.area(data, x="TIMESTAMP", y=["NUM_POSITIVE", "NUM_NEGATIVE", "NUM_NEUTRAL"])
+    fig2 = px.bar(data, x="TIMESTAMP", y="NUM_MENTIONS")
+    fig2.update_traces(yaxis="y2",showlegend=True,name='NUM_MENTIONS')
+    if data.shape[0] > 20:
+        subfig.add_traces(fig.data + fig2.data)
+    else:
+        subfig.add_traces(fig.data)
+    subfig.update_layout({
+    'plot_bgcolor': 'rgba(0,0,0,0)',
+    'paper_bgcolor': 'rgba(0,0,0,0)'
+     })  
+    return subfig
 
 charts = get_chart_data_obj()
 
@@ -112,7 +129,6 @@ with st.container():
     page_metrics_s2 = st.container()
     
 # Containers to hold sub-sections for section 1    
-con1 = st.empty().container()
 con2 = st.empty().container()
 
 with con2:
@@ -134,6 +150,7 @@ with con2:
     else:
         query="2022"
     
+    con1 = st.empty().container()
     # Section logic
     data = charts.get_data_for_month(query, sortBy, top)
     
@@ -156,12 +173,12 @@ with con1:
     col1, col2, col3, col4 = st.columns(4)
     data = charts.table3_query1()
     data_ = data.loc[data.DetailLevel == query]
-    st.write(data_)
-    st.write(data.loc[data.LEVEL == aggregationType.upper()])
-    col1.metric("Total Tweets", data_.NUM_MENTIONS, data_.D_NUM_MENTIONS.to_list()[0])
-    col2.metric("+ve Tweets", data_.NUM_POSITIVE, data_.D_NUM_POSITIVE.to_list()[0])
-    col3.metric("Neu Tweets", data_.NUM_NEUTRAL, data_.D_NUM_NEUTRAL.to_list()[0])
-    col4.metric("-ve Tweets", data_.NUM_NEGATIVE, data_.D_NUM_NEGATIVE.to_list()[0])
+    #st.write(data_)
+    #st.write(data.loc[data.LEVEL == aggregationType.upper()])
+    col1.metric("Total Tweets", data_.NUM_MENTIONS,  data_.NUM_MENTIONS.to_list()[0] - data_.D_NUM_MENTIONS.to_list()[0])
+    col2.metric("+ve Tweets", data_.NUM_POSITIVE, data_.NUM_POSITIVE.to_list()[0] - data_.D_NUM_POSITIVE.to_list()[0])
+    col3.metric("Neu Tweets", data_.NUM_NEUTRAL,  data_.NUM_NEUTRAL.to_list()[0] - data_.D_NUM_NEUTRAL.to_list()[0])
+    col4.metric("-ve Tweets", data_.NUM_NEGATIVE, data_.NUM_NEGATIVE.to_list()[0] - data_.D_NUM_NEGATIVE.to_list()[0])
  
 with st.container():    
     st.markdown("-----")
@@ -174,51 +191,89 @@ con4 = st.empty().container()
 
 with con3:
     st.subheader("Text data")
-    _1, _2, _ = st.columns([1, 1, 2])
-    top2 = _1.selectbox("Recent tweets", [10, 25, 50, 100, 500, 1000], 0, key="top2")
-    ticker = _2.selectbox("Filter By Ticker", ["None"]+load_tickers(), 0)
-    recent_tweets = charts.get_recent_tweets()
+    # limit and filter
+    _1, _2, _3 = st.columns([1, 1, 2])
+    top2 = _1.selectbox("Recent tweets", [10, 25, 50, 100, 500], 0, key="top2")
+    ticker = _2.empty().container()
+    # start and end-dates
+    dts = _3.date_input(label='Date Range: ',
+                value=(MIN_DATE, MAX_DATE),
+                key='#date_range',
+                help="The start and end date time",
+                min_value=MIN_DATE, max_value=MAX_DATE)
     
-    tab1, tab2 = st.tabs(["Chart", "Data"])
-    
-    with tab1:
-        col1, col2 = st.columns([2, 1.5])  
-        col1.subheader("Wordcloud of these tweets")
+    try:
+        recent_tweets = charts.get_recent_tweets(top2, start=dts[0].strftime('%Y-%m-%d 00:00:00'), end=dts[1].strftime('%Y-%m-%d 24:00:00'))
         
-        with col2:
+        ticker = ticker.selectbox("Filter By Ticker", ["None"]+list(set(recent_tweets.TICKER.to_list())), 0)
+        if ticker != 'None':
+            st.write('yesss')
+            recent_tweets =  charts.get_recent_tweets(top2, ticker=ticker, start=dts[0].strftime('%Y-%m-%d 00:00:00'), end=dts[1].strftime('%Y-%m-%d 24:00:00'))
+        
+    
+        tab1, tab2 = st.tabs(["Chart", "Data"])
+        
+        with tab1:
+            col1, col2 = st.columns([1.6, 2.5])  
+            col1.subheader("Wordcloud of these tweets")
             
-            st.markdown("""
-                    <style>
-                        .cell-rect[style] {
-                            opacity: 0.2 !important;
-                        }
-                    </style>
-                    """, unsafe_allow_html=True)
-            
-            st.plotly_chart(plot_recent_tweets_text(recent_tweets))
-            
-        with col1:
-            # Chart the wordcloud
-            text = " ".join(recent_tweets.TEXT)
-            w = WordCloud(background_color="grey", colormap="hot").generate(text)
-            plt.figure(figsize=(5,20))
-            fig, ax = plt.subplots()
-            ax.imshow(w, interpolation="bilinear")
-            ax.set_axis_off()      
-            st.set_option('deprecation.showPyplotGlobalUse', False)
-            st.pyplot()
-    with tab2:
-        st.write(recent_tweets)
+            with col2:
+                
+                st.markdown("""
+                        <style>
+                            .cell-rect[style] {
+                                opacity: 0.2 !important;
+                            }
+                        </style>
+                        """, unsafe_allow_html=True)
+                
+                st.plotly_chart(plot_recent_tweets_text(recent_tweets))
+                
+            with col1:
+                # Chart the wordcloud
+                text = " ".join(recent_tweets.CLEANTEXT)
+                w = WordCloud(background_color="white", colormap="hot").generate(text)
+                plt.figure(figsize=(5,20))
+                fig, ax = plt.subplots()
+                ax.imshow(w, interpolation="bilinear")
+                ax.set_axis_off()      
+                st.set_option('deprecation.showPyplotGlobalUse', False)
+                st.pyplot()
+                # Sentiment count
+                temp = recent_tweets.groupby('SENTIMENT').size().to_dict()
+                st.text(f"{temp.get('POSITIVE', 0)} Positive tweets, {temp.get('NEGATIVE', 0)} Negative tweets")
+                st.text(f"{recent_tweets.shape[0]} Total tweets")          
+        with tab2:
+            st.write(recent_tweets)
         #st.download_button("Download", recent_tweets, key="recentTweets")
+    except IndexError:
+        pass    
+            
+    
   
 with con4:
     st.subheader("Ticker Trends")
-    _1, _2, _ = st.columns([1, 1, 2])
+    _1, _2, _3, _4 = st.columns([1, 1, 2, 2])
     tick1 = _1.selectbox("Ticker (Primary)", load_tickers(), 0, key="tick1")
     tick2 = _2.selectbox("Ticker (Secondary)", ["None"]+load_tickers(), 0, key="tick2")
-    
-    st.radio("radio", ["X", "Y"]) 
-    st.markdown('<style>div.Widget.row-widget.stRadio > div{flex-direction:row !important;}</style>', unsafe_allow_html=True)
+    level = _3.selectbox("Level", ["Monthly", "Daily", "Hourly"], 0, key="level")
+    # start and end-dates
+    if level in ('Hourly', 'Daily'):
+        dts = _4.date_input(label='Date Range: ',
+                    value=(MIN_DATE, MAX_DATE),
+                    key='#date_range2',
+                    help="The start and end date time",
+                    min_value=MIN_DATE, max_value=MAX_DATE)
+        
+    try:
+        data = charts.table1_query2(tick1, level)
+        data = data.loc[data.TIMESTAMP.dt.date >= dts[0]].loc[data.TIMESTAMP.dt.date <= dts[1]]
+        st.plotly_chart(plot_timeline(data))
+        if tick2 != 'None':
+            data = charts.table1_query2(tick2, level)
+            st.plotly_chart(plot_timeline(data))
+    except IndexError:
+        pass
         
         
         

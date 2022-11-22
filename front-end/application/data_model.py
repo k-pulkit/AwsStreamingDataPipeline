@@ -19,8 +19,11 @@ class ChartData(object):
         self.table3 = self.db.Table("pknn-twitter-capstone-project-table-3")
         
     def table3_query1(self):
+        """
+        For metrics
+        """
         table3 = self.table3
-        @st.cache
+        #@st.cache
         def _table3_query1():
             out = table3.scan()["Items"]
             return pd.json_normalize(ddb_json.loads(out))
@@ -28,9 +31,7 @@ class ChartData(object):
         
     def table1_query1(self, dateTimeStr, ticker=None):
         """
-        pknn-twitter-capstone-project-table-2
-        Third pattern, is to recent tweets
-        Query Arguments - DataTimePattern, [Ticker]
+        For Trending Stocks chart
         """
         table1 = self.table1
         base_exp = "DetailLevel = :level"
@@ -52,9 +53,78 @@ class ChartData(object):
             if nextToken is None: break        
         return result
     
+    def table1_query2(self, ticker, level, startTime=None, endTime=None):
+        """
+        For getting trends for particular ticker
+        """
+        table1 = self.table1
+        indexName = "IndexByTickerTime"
+        base_exp = "TickerDetail = :tick"
+        base_kv = {":tick":ticker.upper()+"_"+level.upper()}
+        nextToken = None
+        startTime = startTime or "2022-10-15 00:00:00"
+        if endTime is None :
+            base_exp += " and #stamp > :time1"
+            base_kv[":time1"] = startTime
+        else:
+            base_exp += " and #stamp between :time1 and :time2"
+            base_kv[":time2"] = endTime 
+            base_kv[":time1"] = startTime 
+        result = []
+        query = partial(table1.query, IndexName=indexName, KeyConditionExpression = base_exp,
+                ExpressionAttributeValues = base_kv,
+                ScanIndexForward=False,
+                ExpressionAttributeNames = {"#stamp": "TIMESTAMP"}
+                )
+        while True:
+            query_r = query(ExclusiveStartKey=nextToken) if nextToken else query()
+            items = query_r["Items"]
+            result.extend(items)
+            nextToken = query_r.get("LastEvaluatedKey", None)
+            if nextToken is None: break
+                
+        out = pd.json_normalize(ddb_json.loads(result))
+        out["TIMESTAMP"] = pd.to_datetime(out.TIMESTAMP.str.split(".", expand=True)[0], format="%Y-%m-%d %H:%M:%S")
+        
+        return out
+    
+    
+    def table2_query1(self, limit=100, startTime=None, endTime=None):
+        """
+        For recent tweets
+        """
+        table2 = self.table2
+        base_exp = "#part = :part"
+        base_kv = {":part": None}
+        startTime = startTime or "2022-10-15 00:00:00"
+        if endTime is None :
+            base_exp += " and #stamp > :time1"
+            base_kv[":time1"] = startTime
+        else:
+            base_exp += " and #stamp between :time1 and :time2"
+            base_kv[":time2"] = endTime 
+            base_kv[":time1"] = startTime 
+        corpus = []
+        nextToken = None
+        for part in range(4):
+            _ = []
+            base_kv[":part"] = str(part)
+            query = partial(table2.query, KeyConditionExpression = base_exp, ExpressionAttributeNames = {"#part": "PARTITION", "#stamp": "TIMESTAMP"}, ExpressionAttributeValues = base_kv, ScanIndexForward=False, Limit=limit)
+            while True:
+                query_r = query(ExclusiveStartKey=nextToken) if nextToken else query()
+                items = query_r["Items"]
+                _.extend(items)
+                nextToken = query_r.get("LastEvaluatedKey", None)
+                if nextToken is None or len(_) >= limit:
+                    nextToken = None
+                    break
+            corpus.extend(_)
+        
+        return pd.json_normalize(corpus).sort_values("TIMESTAMP", ascending=False).iloc[:limit].reset_index(drop=True)
+    
     def get_data_for_month(self, query, sortBy="NUM_MENTIONS", top=10):
-        @st.cache
-        def _get_data_for_month(query):
+        #@st.cache
+        def _helper(query):
             res = self.table1_query1(query)
             if len(res) == 0:
                 return None
@@ -63,7 +133,7 @@ class ChartData(object):
                                 , NUM_NEGATIVE_R=lambda x: x["NUM_NEGATIVE"]/x["NUM_MENTIONS"]\
                                 , NUM_NEUTRAL_R=lambda x: x["NUM_NEUTRAL"]/x["NUM_MENTIONS"])
         # Get results from DDB or CACHE 
-        df = _get_data_for_month(query)
+        df = _helper(query)
         if df is not None:  
             sortBy = sortBy if sortBy == "NUM_MENTIONS" else sortBy+"_R"
             df_t = df.sort_values(sortBy, ascending=False).iloc[:top]
@@ -71,27 +141,19 @@ class ChartData(object):
         else:   
             return None
         
-    def get_recent_tweets(self, ticker=None):
+    def get_recent_tweets(self, limit=10, start=None, end=None, ticker=None):
         """
         This method return recent tweets, either across all available,
         or, if ticker is given, then gives the recent tweets for those symbols
         """
-        dummy_data = pd.DataFrame({
-            'TICKER': ["X", "XX", "X", "XX", "X", "XX", "X", "XX", "X", "XX", "X", "XX"],\
-            "TEXT": ["6 8 32 de DESCUENTO Autumn Winter Cold-proof Running Gloves Windproof Non-slip Keep Warm Touch Screen Outdoor Sports Cycling Gloves Men And Women URL https t co 6xN3HBxvLo"] + ["""A+ assurance in your essay(s).
-Excel in:
-#Nursing
-#Politicalscience
-#Nursing
-#English
-#Anatomy
-#PsychologyPaper
-#Researchpaper
-#BostonCollege
-#Modric
-#TSLA
-KINDLY DM https://t.co/VtChPWA1WW"""   ]*11,\
-            "SENTIMENT": ["POSITIVE", "POSITIVE", "NEUTRAL", "POSITIVE", "NEGATIVE", "POSITIVE", "POSITIVE", "POSITIVE", "POSITIVE", "POSITIVE", "POSITIVE", "NEGATIVE"]
-        })
-        
-        return dummy_data
+        #@st.cache
+        def _helper(limit, start=None, end=None):
+            return self.table2_query1(limit, start, end)
+        df = _helper(limit, start, end)
+        if ticker:
+            return df.loc[df.TICKER == ticker].reset_index(drop=True)
+        else:
+            return df
+            
+       
+       
