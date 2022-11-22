@@ -141,7 +141,7 @@ def transformation3(dyf: DynamicFrame, glue_ctx: GlueContext, name: str, mapping
                 df = df.select('tweet_id', 'ticker', 'tweet_text_sentiment', \
                                'tweet_text_text', 'tweet_text_clean', 'tweet_meta_created_at', 'tweet_text_sentiment')
                 # Select the top 500 tweets only, as output will show these many at most
-                df = df.orderBy(f.desc('tweet_meta_created_at')).limit(500)
+                df = df.orderBy(f.desc('tweet_meta_created_at'))                        # .limit(500)
                 # Create 2 columns, TIMESTAMP AND PARTITION
                 # FOR TIMESTAMP, to make it unique we append the twitter id's last 10 digits
                 df_ = df.withColumn('TIMESTAMP', df.tweet_meta_created_at.cast(dataType=t.TimestampType()).cast(t.StringType()))\
@@ -149,6 +149,7 @@ def transformation3(dyf: DynamicFrame, glue_ctx: GlueContext, name: str, mapping
                         .withColumn('_', f.substring(f.col('_'), -10, 10))\
                         .withColumn('TIMESTAMP', f.concat(f.col('TIMESTAMP'), f.lit("."), f.col('_') ))\
                         .withColumn('PARTITION', (f.col('tweet_id').cast(t.LongType()) % f.lit(num_partitions)).cast(t.StringType()))\
+                        .withColumn('tweet_id', f.col('tweet_id').cast(t.StringType()))\
                         .withColumn('RUN_ID', f.lit(helper.runid))
                 
                 # Map to types needed and return DynamicFrame            
@@ -373,6 +374,9 @@ if __name__ == "__main__":
                         df = df_1.union(df_2)
                         return df
                 
+                # We will load current new tweets to DDB directly
+                dyf_2_ddb = dyf_2
+                
                 # Combine the historic data with current batch
                 # We create final aggregation tables
                 if FLAG_COMBINE_WITH_S3:
@@ -390,6 +394,7 @@ if __name__ == "__main__":
                         dyf_1 = DynamicFrame.fromDF(df_1, GlueContext, "union_dyf_1")
                         
                         # dyf_2 and dyf_table2
+                        # No grouping for this table, so we can just append the data directly for current interval to DDB to save write operations
                         print("Aggregation-2")
                         df_2 = union_(dyf_2, dyf_table2)
                         dyf_2 = DynamicFrame.fromDF(df_2, GlueContext, "union_dyf_2")
@@ -445,7 +450,7 @@ if __name__ == "__main__":
                         #@ TARGET - DDBTABLE-2
                         #About - Allows search for a particular month, year, or hour, based on input query
                         Datasink2 = GlueContext.write_dynamic_frame_from_options(
-                                                        frame=dyf_2,
+                                                        frame=dyf_2_ddb,
                                                         connection_type="dynamodb",
                                                         connection_options={
                                                                 "dynamodb.output.tableName": DDB_TABLE2
