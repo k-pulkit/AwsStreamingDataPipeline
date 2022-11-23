@@ -25,6 +25,11 @@ st.set_page_config(
     layout="wide"
 )
 
+# Clear cache once daily
+utcnow = datetime.datetime.utcnow()
+if utcnow.hour == 24 and utcnow.minute == 40:
+    st.runtime.legacy_caching.clear_cache()
+
 ############## FUNCTIONS HERE #######################
 BASE_PATH = os.path.dirname(os.path.abspath(__name__))
 MIN_DATE = datetime.datetime(2022, 10, 27)
@@ -275,6 +280,8 @@ with con4:
             st.plotly_chart(fig)
         if tick2 != 'None':
             data = charts.table1_query2(tick2, level)
+            if level in ('Hourly', 'Daily'):
+                data = data.loc[data.TIMESTAMP.dt.date >= dts[0]].loc[data.TIMESTAMP.dt.date <= dts[1]]
             st.plotly_chart(plot_timeline(data))
             with st.expander("Click to read recent tweets in selected range"):
                 st.text(tick2)

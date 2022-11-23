@@ -15,16 +15,6 @@ st.caption("Lambton College - Pulkit, Zarna, Yasin, Deep, Nikita")
 st.markdown("""
             ## About
             
-            In this project, we are building a data pipeline
+            TO BE DONE
             """)
-
-with open("../application/data/sp100.pickle", "rb") as fx:
-    st.write(pickle.load(fx))
-
-parser = configparser.ConfigParser()
-parser.read("../application/data/conf.ini")
-st.write(parser["DYNAMO"]["secret"])
-
-with open("../application/data/api.json", "r") as x:
-    st.json(json.load(x))
 
