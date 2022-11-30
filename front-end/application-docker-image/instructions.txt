@@ -1,0 +1,5 @@
+1. Go to parent folder
+2. Create the image using
+
+docker build -f ./application-docker-image/Dockerfile -t pknn-twitter-front-end-python . 
+docker run --rm --name test -p 8080:8501 pknn-twitter-front-end-python
