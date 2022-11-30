@@ -120,7 +120,7 @@ def transformation2(dyfList: list, glue_ctx: GlueContext, name: str) -> DynamicF
                 df = dyfList[0].toDF()  # convert to spark DF
                 for i in range(1, len(dyfList)):
                     x = dyfList[i].toDF()
-                    df = df.union(x)
+                    df = df.unionByName(x)
                 # convert to DynamicFrame and return
                 df = df.withColumn('RUN_ID', f.lit(helper.runid))
                 return DynamicFrame.fromDF(df, glue_ctx=glue_ctx, name=name)
@@ -371,7 +371,7 @@ if __name__ == "__main__":
                         #df_1.printSchema()
                         #df_2.printSchema()
                         # union the two dataframes, and add RUN_ID
-                        df = df_1.union(df_2)
+                        df = df_1.unionByName(df_2)
                         return df
                 
                 # We will load current new tweets to DDB directly
