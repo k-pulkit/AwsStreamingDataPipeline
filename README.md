@@ -47,7 +47,6 @@ To support the front-end dashboard queries, we have created three DynamoDB table
 The product that we have created is a user dashboard, that is a web application. The dashboard application allows the user to deep dive into the tweet summaries by making selections such as the level of detail required (yearly, hourly etc.) or ticker symbol and timeframe of interest. The various elements and functions of the dashboard application are as follows – 
 
 ### Element 1 – Sidebar
-![Sidebar](./assets/images/elem1.png)
 The first element of design as shown by Figure 4, is the sidebar element. The functional value of this element is only to show the index, or the table of contents, and a manual refresh button if the user needs to force refresh the page elements.
 
 ### Element 2 – User Selections and Overall metrics
