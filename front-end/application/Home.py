@@ -58,11 +58,11 @@ st.caption("Lambton College - Pulkit, Zarna, Yasin, Deep, Nikita")
 with st.sidebar:
     st.header("Index")
     st.markdown("[Section 1](#section-1)")
-    st.markdown("- [Metrics](#section-1)")
-    st.markdown("- [Trending Stocks](#section-1)")
-    st.markdown("[Section 2](#section-1)")
-    st.markdown("- [Text](#section-1)")
-    st.markdown("- [Ticker Trends](#section-1)")
+    st.markdown("- [Metrics](#metrics)")
+    st.markdown("- [Trending Stocks](#trending-stocks)")
+    st.markdown("[Section 2](#section-2)")
+    st.markdown("- [Text Analysis](#text-data)")
+    st.markdown("- [Ticker Trends](#ticker-trends)")
     st.markdown("-----")
     refresh_page = st.columns([1,30,1])[1].button("Refresh Page 🔁", help="Refreshes the page by pulling data and updating charts")
 
@@ -130,7 +130,10 @@ charts = get_chart_data_obj()
 with st.container():
     st.markdown("-----")
     st.header("Section 1")
-    st.markdown("In the first section, we look at the trends and compare the different stocks based on <br>the number of mentions. We have built a leaderboard, and also charing the break-up of individual mentions into positive, negative and neutral tweets.")
+    st.markdown("""
+                In the first section, we look at the trends and compare the different stocks based on the number of mentions.   
+                The user need to make selection for the level of data they are interested in: yearly, monthly, daily or hourly.  
+                """)
     page_metrics_s2 = st.container()
     
 # Containers to hold sub-sections for section 1    
@@ -188,7 +191,8 @@ with con1:
 with st.container():    
     st.markdown("-----")
     st.header("Section 2")
-    st.markdown("In the second section, we want to dive deeper into individual ticker symbols. We do so by asking user input for more than one TICKER symbol and show the vizualizations to compare.")
+    st.markdown("In the second section, we allow the user to look the recent tweet information.\
+                 We want to dive deeper into individual ticker symbols. We do so by asking user input for more than one TICKER symbol and show the vizualizations to compare.")
     page_metrics_s2 = st.container() 
 
 con3 = st.empty().container()
