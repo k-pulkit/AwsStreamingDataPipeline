@@ -23,7 +23,7 @@ class ChartData(object):
         For metrics
         """
         table3 = self.table3
-        @st.cache
+        @st.cache(ttl=3600)
         def _table3_query1():
             out = table3.scan()["Items"]
             return pd.json_normalize(ddb_json.loads(out))
@@ -127,7 +127,7 @@ class ChartData(object):
         
     
     def get_data_for_month(self, query, sortBy="NUM_MENTIONS", top=10):
-        @st.cache
+        @st.cache(ttl=3600)
         def _helper(query):
             res = self.table1_query1(query)
             if len(res) == 0:
@@ -150,7 +150,7 @@ class ChartData(object):
         This method return recent tweets, either across all available,
         or, if ticker is given, then gives the recent tweets for those symbols
         """
-        @st.cache
+        @st.cache(ttl=3600)
         def _helper(limit, start=None, end=None):
             return self.table2_query1(limit, start, end)
         df = _helper(limit, start, end)
@@ -164,7 +164,7 @@ class ChartData(object):
         This method return recent tweets, either across all available,
         or, if ticker is given, then gives the recent tweets for those symbols
         """
-        @st.cache
+        @st.cache(ttl=3600)
         def _helper(limit, start=None, end=None, ticker=None):
             return self.table2_query1(limit, start, end, ticker)
         df = _helper(limit, start, end, ticker)
