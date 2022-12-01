@@ -34,6 +34,7 @@ if utcnow.hour == 24 and utcnow.minute == 40:
 BASE_PATH = os.path.dirname(os.path.abspath(__name__))
 MIN_DATE = datetime.datetime(2022, 10, 27)
 MAX_DATE = datetime.datetime.today() - datetime.timedelta(days=1)
+MAX_DATE = datetime.datetime(2022, 11, 30)   # Setting max date as stopping ingestion
 DEFAULT_DATE = MAX_DATE
 # st.write(MAX_DATE)
 
