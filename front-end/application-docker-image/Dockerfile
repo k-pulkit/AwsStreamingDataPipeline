@@ -3,9 +3,6 @@
 FROM python:3.8-slim-buster
 
 WORKDIR /usr/src/app
-ENV AWS_DEFAULT_REGION us-east-1
-ENV AWS_ACCESS_KEY_ID *****
-ENV AWS_SECRET_ACCESS_KEY ******
 
 COPY ./application-docker-image/requirements.txt requirements.txt
 RUN pip3 install --no-cache-dir -r requirements.txt

@@ -3,3 +3,9 @@
 
 docker build -f ./application-docker-image/Dockerfile -t pknn-twitter-front-end-python . 
 docker run --rm --name test -p 8080:8501 pknn-twitter-front-end-python
+
+Set env variables when starting container
+
+AWS_DEFAULT_REGION
+AWS_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY
