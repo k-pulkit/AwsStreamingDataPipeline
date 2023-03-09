@@ -1,5 +1,9 @@
 # AwsStreamingDataAnalysis
 
+## Video
+
+[![Watch the video](https://i9.ytimg.com/vi_webp/OjFfepH4c4o/mq2.webp?sqp=CLjwpaAG&rs=AOn4CLDM9K1Z806kFgiL9u7Is0sexNo9Wg)](https://youtu.be/OjFfepH4c4o)
+
 ## About this project
         
 Big data and Cloud computing technologies have become mainstream in the past two decades, and are being used by every organization to store, process and analyze large volumes of data.   
